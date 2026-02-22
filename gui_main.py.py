@@ -99,7 +99,7 @@ class GW_Predictor_GUI(QWidget):
         self.btn_gw.clicked.connect(self.load_gw_file)
         self.btn_gw.setStyleSheet("background:#f6e58d; border-radius:7px; padding:8px;")
 
-        self.btn_weather = QPushButton("📂 انتخاب فایل داده‌های هواشناسی", self)
+        self.btn_weather = QPushButton("📂 انتخاب فایل داده‌های هواشناسی (اختیاری)", self)
         self.btn_weather.setFont(font_button)
         self.btn_weather.clicked.connect(self.load_weather_file)
         self.btn_weather.setStyleSheet("background:#f6e58d; border-radius:7px; padding:8px;")
@@ -184,8 +184,8 @@ class GW_Predictor_GUI(QWidget):
         filters_max = self.filters_max.text()
 
         # چک کردن ورودها
-        if not all([self.gw_path, self.weather_path, self.output_dir]):
-            QMessageBox.warning(self, "⚠️ خطا", "لطفاً مسیر همه فایل‌ها را مشخص کنید.")
+        if not all([self.gw_path, self.output_dir]):
+            QMessageBox.warning(self, "⚠️ خطا", "لطفاً فایل تراز آب و پوشه خروجی را مشخص کنید.")
             return
 
         if not all([lr, seq_min, seq_max, dense_min, dense_max, batch_min, batch_max, filters_min, filters_max]):
@@ -196,8 +196,8 @@ class GW_Predictor_GUI(QWidget):
         shift = self.shift_combo.currentText()
         model_script = f"{model}_seq2val{'_GWLshift' if shift == 'GWLt-1' else ''}.py"
 
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        model_path = os.path.join(base_dir, "models", model_script)
+        base_dir = os.path.abspath(os.path.dirname(__file__))
+        model_path = os.path.join(base_dir, model_script)
 
         # 👇 شروع نمایش نوار پیشرفت
         self.progress_bar.setVisible(True)
@@ -205,10 +205,12 @@ class GW_Predictor_GUI(QWidget):
         self.progress_bar.setMaximum(0)  # حالت نامشخص (چرخش بی‌نهایت)
 
         try:
+            met_arg = self.weather_path if self.weather_path else "NONE"
+
             subprocess.run([
                 "python", model_path,
                 self.gw_path,
-                self.weather_path,
+                met_arg,
                 self.output_dir,
                 lr,
                 seq_min, seq_max,
@@ -217,7 +219,8 @@ class GW_Predictor_GUI(QWidget):
                 filters_min, filters_max
             ], check=True)
 
-            QMessageBox.information(self, "✅ موفقیت", "مدل اجرا و نتایج ذخیره شدند!")
+            met_status = "با داده‌های هواشناسی" if self.weather_path else "بدون داده‌های هواشناسی"
+            QMessageBox.information(self, "✅ موفقیت", f"مدل اجرا شد ({met_status}) و نتایج ذخیره شدند!")
 
         except subprocess.CalledProcessError as e:
             QMessageBox.critical(self, "❌ خطا", f"{e}")
